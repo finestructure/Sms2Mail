@@ -5,6 +5,8 @@ from Foundation import *
 import sqlite3
 import datetime
 
+mynumber = '+491712169993'
+
 if len(sys.argv) < 2:
     #backupdir = os.environ['HOME'] + '/Library/Application Support/MobileSync/Backup'
     backupdir = os.environ['HOME'] + '/Downloads/Backup'
@@ -28,18 +30,38 @@ def writeSqliteFile(backupdir, fname='sms.db'):
     data = plist.objectForKey_('Data')
     data.writeToFile_atomically_(fname, True)
 
-#writeSqliteFile(backupdir)
+writeSqliteFile(backupdir)
 
 sqlitefile = 'sms.db'
 conn = sqlite3.connect(sqlitefile)
 
 cur = conn.cursor()
-cur.execute('select address, date, text from message')
-for a, d, t in cur.fetchall():
-    print a, d, t
-    number = '1712169993'
-    if a is not None and number in a:
-        d = datetime.datetime.fromtimestamp(d)
-        #print d
-        #print t
+
+groups = {}
+cur.execute('select group_id, address from group_member order by address')
+for g, a in cur.fetchall():
+    if g not in groups.keys():
+        groups[g] = [a]
+    else:
+        groups[g].append(a)
+
+print groups
+
+cur.execute('select address, date, text, flags, group_id from message order by date')
+for a, d, t, f, g in cur.fetchall():
+    #print a, d, t
+    if a is None or t is None:
+        continue
+    subject = 'Conversation with %s (id %d)' % (', '.join(groups[g]), g)
+    if f == 2: # to me
+        sender = a
+        recipient = mynumber
+    else: # f == 3 typically
+        sender = mynumber
+        recipient = a
+    date = datetime.datetime.fromtimestamp(d)
+    
+    print 'Subject:', subject
+    print '\tFrom:', sender
+    print '\tTo:', recipient
         
