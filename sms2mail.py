@@ -10,20 +10,29 @@ import ConfigParser
 import imaplib
 import time
 
-mynumber = '+491712169993'
+config_filename = '~/.sms2mail.conf'
+
 
 def getSmsPlist(backupdir):
+    """
+    Find the plist file containing the sms sqlite database.
+    Returns the plist file.
+    """
     for root, dirs, files in os.walk(backupdir):
         for f in files:
             if f.endswith('mdbackup'):
-                #print 'reading:', f
                 path = os.path.join(root, f)
                 plist = NSDictionary.dictionaryWithContentsOfFile_(path)
                 if plist != None:
                     if plist.objectForKey_('Path') == 'Library/SMS/sms.db':
                         return plist
 
+
 def getSqliteFile(backupdir):
+    """
+    Save the sqlite database from the backup in a temp file.
+    Returns the temp file object.
+    """
     temp = tempfile.NamedTemporaryFile()
     plist = getSmsPlist(backupdir)
     data = plist.objectForKey_('Data')
@@ -31,23 +40,10 @@ def getSqliteFile(backupdir):
     return temp
 
 
-def createMessage(sender, recipient):
-    subject = 'Conversation with 01736119016 (id 57)'
-    sender = '+491736119016'
-    recipient = '+491712169993'
-    sms_id = '2f6480926b0d1e004fdd3dd9ef8eb9c09c564c58'
-    
-    message = ''
-    message += 'Sms-Id: %s\r\n' % sms_id
-    message += 'Date: %s\r\n' % time.ctime(1218643812)
-    message += 'Subject: New Test\r\n'
-    message += 'From: %s\r\n' % sender
-    message += 'To: %s\r\n' % recipient
-    message += '\r\n'
-    message += 'blah text here'
-
-
 def getGroups(connection):
+    """
+    Get the groups from the sqlite database.
+    """
     cursor = connection.cursor()
 
     groups = {}
@@ -61,7 +57,17 @@ def getGroups(connection):
     return groups
 
 
-def createMessages(connection, filter=None):
+def createMessages(connection, mynumber, filter=None):
+    """
+    Create a message dictionary for each sms text message in the sqlite
+    database.
+    Returns a list of message dictionaries with keys: id, time, message
+    id: A unique hash generated from the address, the date, the flags,
+        and the group. This hash is used to make sure a message is uploaded
+        only once.
+    time: Timestamp of the sms message in seconds since the epoch.
+    message: The sms text message body.
+    """
     groups = getGroups(conn)
 
     cursor = connection.cursor()
@@ -102,6 +108,10 @@ def createMessages(connection, filter=None):
 
 
 def getExistingIds(imap_connection):
+    """
+    Gets the lists of sms ids already on the IMAP server. Every message
+    has a header 'Sms-Id' with the unique text message hash.
+    """
     existing_ids = []
     
     t, data = imap_connection.search(None, 'ALL')
@@ -116,6 +126,11 @@ def getExistingIds(imap_connection):
 
 
 def uploadMessages(messages):
+    """
+    Uploads new messages to the IMAP server. New messages are identified by
+    their sms_id. Only messages with ids not already present on the server
+    are uploaded.
+    """
     M = imaplib.IMAP4_SSL(host=host, port=port)
     M.login(user, password)    
     M.select(sms_mailbox)
@@ -134,15 +149,13 @@ def uploadMessages(messages):
 
 if __name__ == '__main__':
 
-    if len(sys.argv) < 2:
-        backupdir = os.environ['HOME'] + '/Library/Application Support/MobileSync/Backup'
-        #backupdir = os.environ['HOME'] + '/Downloads/Backup'
-    else:
-        backupdir = sys.argv[1]
+    # could be a config option but it's probably not necessary
+    backupdir = os.path.expanduser('~/Library/Application Support/'
+                                   'MobileSync/Backup')
 
     # get options    
     config = ConfigParser.ConfigParser()
-    config.read(os.path.expanduser('~/.sms2mail.conf'))
+    config.read(os.path.expanduser(config_filename))
     
     user = config.get('IMAP', 'user')
     password = config.get('IMAP', 'password')
@@ -152,12 +165,12 @@ if __name__ == '__main__':
         port = config.get('IMAP', 'port')
     except ConfigParser.NoOptionError:
         port = 993 # IMAP SSL
-
+    mynumber = config.get('Phone', 'mynumber')
 
     sqlitefile = getSqliteFile(backupdir)
     conn = sqlite3.connect(sqlitefile.name)
     
-    messages = createMessages(conn)
+    messages = createMessages(conn, mynumber)
     
     uploadMessages(messages)
     
