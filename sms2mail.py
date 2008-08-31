@@ -47,7 +47,7 @@ def getSqliteFile(backupdir):
     return temp
 
 
-def getGroups(connection, phonebook):
+def getGroups(connection):
     """
     Get the groups from the sqlite database.
     """
@@ -57,11 +57,7 @@ def getGroups(connection, phonebook):
     cursor.execute('select group_id, address '
                    'from group_member order by address')
     for g, a in cursor.fetchall():
-        a = filter_digits(a)
-        try:
-            a = phonebook[a]
-        except KeyError:
-            pass
+        a = lookup(a)
         if g not in groups.keys():
             groups[g] = [a]
         else:
@@ -80,18 +76,11 @@ def createMessages(connection, mynumber, filter=None):
     time: Timestamp of the sms message in seconds since the epoch.
     message: The sms text message body.
     """
-    phonebook = getPhonebook()
-    groups = getGroups(conn, phonebook)
-    
-    mynumber = filter_digits(mynumber)
-    try:
-        me = phonebook[mynumber]
-    except KeyError:
-        me = mynumber
-
+    groups = getGroups(conn)
+    me = lookup(mynumber)
     cursor = connection.cursor()
-
     messages = []
+    
     cursor.execute('select address, date, text, flags, group_id '
                 'from message order by date')
     for a, d, t, f, g in cursor.fetchall():
@@ -248,6 +237,21 @@ def getPhonebook():
             phonebook[phonenumber] = ' '.join([record[1], record[2]])
     return phonebook
 
+
+phonebook = getPhonebook()
+
+def lookup(number):
+    digitsonly = filter_digits(number)
+    try:
+        return phonebook[digitsonly]
+    except KeyError:
+        # try a little harder to match numbers like 0171 with 49171
+        if digitsonly.startswith('0'):
+            digitsonly = digitsonly[1:]
+            for n in phonebook.keys():
+                if n.endswith(digitsonly):
+                    return phonebook[n]
+        return number
 
 
 if __name__ == '__main__':
