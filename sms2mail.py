@@ -89,12 +89,7 @@ def createMessages(connection, mynumber, filter=None):
         if filter is not None and filter not in a:
             continue
         
-        a = filter_digits(a)
-        try:
-            other = phonebook[a]
-        except KeyError:
-            other = a
-        
+        other = lookup(a)        
         subject = ('Subject: Conversation with '
                    '%s (Group %d)') % (', '.join(groups[g]), g)
         if f == 2: # to me
@@ -246,7 +241,7 @@ def lookup(number):
         return phonebook[digitsonly]
     except KeyError:
         # try a little harder to match numbers like 0171 with 49171
-        if digitsonly.startswith('0'):
+        if digitsonly.startswith('0') or digitsonly.startswith('00'):
             digitsonly = digitsonly[1:]
             for n in phonebook.keys():
                 if n.endswith(digitsonly):
