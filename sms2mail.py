@@ -154,9 +154,14 @@ def uploadMessages(messages):
     cached_ids = readExistingIdsCache()
     # check if there are any new messags at all against the cache
     # before hitting the IMAP server
+    i = 0
     for msg in messages:
         if msg['id'] in cached_ids:
-            messages.remove(msg)
+            #messages.remove(msg) # error: UnicodeWarning: Unicode equal
+            # comparison failed to convert both arguments to Unicode 
+            # - interpreting them as being unequal
+            del messages[i]
+        i += 1
     if messages == []:
         return
     
