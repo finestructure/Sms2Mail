@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+# Author: Sven A. Schmidt
+# Email: sas@abstracture.de
+# Date: 2008-08-31
+# Revision: $Id$
+
 import sys
 import os
 from Foundation import *
