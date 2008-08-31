@@ -242,7 +242,7 @@ def lookup(number):
     except KeyError:
         # try a little harder to match numbers like 0171 with 49171
         if digitsonly.startswith('0') or digitsonly.startswith('00'):
-            digitsonly = digitsonly[1:]
+            digitsonly = digitsonly.lstrip('0')
             for n in phonebook.keys():
                 if n.endswith(digitsonly):
                     return phonebook[n]
