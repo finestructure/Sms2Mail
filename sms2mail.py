@@ -196,7 +196,7 @@ def uploadMessages(messages):
         if msg['id'] not in existing_ids:
             flags = ''
             date = time.localtime(msg['time'])
-            M.append(sms_mailbox, flags, date, msg['message'])
+            print M.append(sms_mailbox, flags, date, msg['message'])
 
     M.close()
     M.logout()
