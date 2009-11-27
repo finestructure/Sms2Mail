@@ -76,7 +76,7 @@ def createMessages(connection, mynumber, filter=None):
     time: Timestamp of the sms message in seconds since the epoch.
     message: The sms text message body.
     """
-    groups = getGroups(conn)
+    groups = getGroups(connection)
     me = lookup(mynumber)
     cursor = connection.cursor()
     messages = []
