@@ -141,20 +141,29 @@ def readExistingIdsCache():
     return res
 
 
-def getExistingIds(imap_connection):
+def getSmsId(header):
   """
-  Gets the lists of sms ids already on the IMAP server. Every message
+  Parse the SmsId fields from a header block.
+  """
+  for line in header.split('\r\n'):
+    if line.startswith('Sms-Id:'):
+      line = line[len('Sms-Id:'):].strip()
+      return line
+  return None
+
+
+def fetchExistingIds(imap_connection):
+  """
+  Fetch the list of sms ids already on the IMAP server. Every message
   has a header 'Sms-Id' with the unique text message hash.
   """
   existing_ids = set()
   
-  t, data = imap_connection.search(None, 'ALL')
-  for num in data[0].split():
-    t, data = imap_connection.fetch(num, '(RFC822)')
-    msgtext = data[0][1]
-    for line in msgtext.split('\r\n'):
-      if line.startswith('Sms-Id:'):
-        existing_ids.add(line.split()[1])
+  t, data = imap_connection.fetch('1:*', '(BODY.PEEK[HEADER])')
+  for response_part in data:
+    if isinstance(response_part, tuple):
+      header = response_part[1]
+      existing_ids.add(getSmsId(header))
   
   return existing_ids
 
@@ -193,7 +202,7 @@ def uploadMessages(messages):
   # happen when the cache is manually reset or the script is run from 
   # another machine
   print 'Fetching existing ids from the server...'
-  server_ids = getExistingIds(M)
+  server_ids = fetchExistingIds(M)
   print 'Found %d ids on the server.' % len(server_ids)
   existing_ids = cached_ids.union(server_ids)
   print 'Total existing ids: %d' % len(existing_ids)
