@@ -84,7 +84,6 @@ def getGroups(sqlitedb):
 def createMessage(sender, receiver, subject, timestamp, sms_id, body):
   try:
     msg = Message()
-    msg.set_charset('utf-8')
     msg.add_header('From', sender.encode('utf-8'))
     msg.add_header('Subject', subject.encode('utf-8'))
     msg.add_header('Date', str(datetime.datetime.fromtimestamp(timestamp)))
@@ -94,6 +93,7 @@ def createMessage(sender, receiver, subject, timestamp, sms_id, body):
     msg.timestamp = time.localtime(timestamp)
     msg.sms_id = sms_id
     email.encoders.encode_quopri(msg)
+    msg.set_charset('utf-8')
     return msg
   except:
     print sender, type(sender)
