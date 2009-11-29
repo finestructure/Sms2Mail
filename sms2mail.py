@@ -15,6 +15,8 @@ import imaplib
 import time
 import pickle
 import AddressBook
+import email
+from email.message import Message
 
 config_filename = os.path.expanduser('~/.sms2mail.conf')
 cache_filename = os.path.expanduser('~/.sms2mail.cache')
@@ -61,17 +63,17 @@ def getSqliteFile(backupdir):
   return temp, sqlitefilename
 
 
-def getGroups(connection):
+def getGroups(sqlitedb):
   """
   Get the groups from the sqlite database.
   """
-  cursor = connection.cursor()
+  cursor = sqlitedb.cursor()
 
   groups = {}
   cursor.execute('select group_id, address '
                  'from group_member order by address')
   for g, a in cursor.fetchall():
-    a = lookup(a)
+    a = lookupName(a)
     if g not in groups.keys():
         groups[g] = [a]
     else:
@@ -79,7 +81,31 @@ def getGroups(connection):
   return groups
 
 
-def getMessages(connection, mynumber, filter=None):
+def createMessage(sender, receiver, subject, timestamp, sms_id, body):
+  try:
+    msg = Message()
+    msg.set_charset('utf-8')
+    msg.add_header('From', sender.encode('utf-8'))
+    msg.add_header('Subject', subject.encode('utf-8'))
+    msg.add_header('Date', str(datetime.datetime.fromtimestamp(timestamp)))
+    msg.add_header('To', receiver.encode('utf-8'))
+    msg.add_header('Sms-Id', sms_id)
+    msg.set_payload(body.encode('utf-8'))
+    msg.timestamp = time.localtime(timestamp)
+    msg.sms_id = sms_id
+    email.encoders.encode_quopri(msg)
+    return msg
+  except:
+    print sender, type(sender)
+    print receiver
+    print subject
+    print timestamp
+    print sms_id
+    print body
+    raise
+
+
+def getMessages(sqlitedb, mynumber):
   """
   Create a message dictionary for each sms text message in the sqlite
   database.
@@ -90,43 +116,35 @@ def getMessages(connection, mynumber, filter=None):
   time: Timestamp of the sms message in seconds since the epoch.
   message: The sms text message body.
   """
-  groups = getGroups(connection)
-  me = lookup(mynumber)
-  cursor = connection.cursor()
+  groups = getGroups(sqlitedb)
+  me = lookupName(mynumber)
+  cursor = sqlitedb.cursor()
   messages = []
   
   cursor.execute('select address, date, text, flags, group_id '
-              'from message order by date')
-  for a, d, t, f, g in cursor.fetchall():
-    if a is None or t is None:
-      continue
-    if filter is not None and filter not in a:
+                 'from message order by date')
+  for phone_number, timestamp, body, flags, group_id in cursor.fetchall():
+    if phone_number is None or body is None:
       continue
     
-    other = lookup(a)        
-    subject = ('Subject: Conversation with '
-               '%s (Group %d)') % (', '.join(groups[g]), g)
-    if f == 2: # to me
-      sender = 'From: %s' % other
-      recipient = 'To: %s' % me
-    elif f == 3: # from me
-      sender = 'From: %s' % me
-      recipient = 'To: %s' % other
+    other = lookupName(phone_number)        
+    subject = ('Conversation with %s (Group %d)') % (
+                          ', '.join(groups[group_id]), group_id)
+    if flags == 2: # to me
+      sender = other
+      receiver = me
+    elif flags == 3: # from me
+      sender = me
+      receiver = other
     else: # default (seen flags 2050 from voice box)
-      sender = 'From: %s' % other
-      recipient = 'To: %s' % me
-    date = 'Date: %s' % datetime.datetime.fromtimestamp(d)
-    sms_id = hashlib.sha1('%s%d%d%d' % (a,d,f,g)).hexdigest()
-    sms_id_header = 'Sms-Id: ' + sms_id
+      sender = other
+      receiver = me
+    sms_id = hashlib.sha1('%s%d%d%d' % (
+                          phone_number, timestamp, flags, group_id)).hexdigest()    
     
-    # FIXME: find a unicode preserving encoding method
-    # base64?
-    body = ('\r\n%s' % t).encode('ascii', 'replace')
-    
-    msg = '\r\n'.join([sender, subject, date, recipient, 
-                       sms_id_header, body])
+    msg = createMessage(sender, receiver, subject, timestamp, sms_id, body)
 
-    messages.append({'id':sms_id, 'time':d, 'message' : msg})
+    messages.append(msg)
   
   return messages            
 
@@ -182,7 +200,7 @@ def uploadMessages(messages):
   # before hitting the IMAP server
   new_messages = []
   for msg in messages:
-    if msg['id'] not in cached_ids:
+    if msg.sms_id not in cached_ids:
       new_messages.append(msg)
 
   print 'New message count:', len(new_messages)
@@ -211,21 +229,28 @@ def uploadMessages(messages):
   cache.close()
   
   print 'Uploading new messages...'
+  new_count = 0
+  skipped_count = 0
   for index, msg in enumerate(new_messages):
-    if msg['id'] not in existing_ids:
-      print 'Saving %d %s' % (index, msg['id'])
-      flags = ''
+    if msg.sms_id not in existing_ids:
+      print 'Saving %d %s' % (index, msg.sms_id)
+      flags = None
       date = time.localtime(msg['time'])
-      res, _ = M.append(sms_mailbox, flags, date, msg['message'])
-      print '\t', res
+      res, _ = M.append(sms_mailbox, flags, msg.timestamp, msg.as_string())
+      print '  ', res
+      if res == 'OK':
+        new_count += 1
     else:
-      print 'Skipping %d %s' % (index, msg['id'])
+      #print 'Skipping %d %s' % (index, msg['id'])
+      skipped_count += 1
+  print 'New messages uploaded:', new_count
+  print 'Skipped (previously uploaded):', skipped_count
 
   M.close()
   M.logout()
 
 
-def filter_digits(string):
+def filterDigits(string):
   digits = '0123456789'
   return ''.join([c for c in string if c in digits])
 
@@ -244,10 +269,10 @@ def encodeField(value):
     # A multi-valued property, merge them into a single string
     result = []
     for i in range(len(value)):
-      result.append(value.valueAtIndex_(i).encode('utf-8'))
+      result.append(value.valueAtIndex_(i))
     return result
 
-  return value.encode('utf-8')
+  return value
 
 
 def getPhonebook():
@@ -267,15 +292,15 @@ def getPhonebook():
 
   for person in book.people():
     record = [ encodeField(person.valueForProperty_(i)) for i in fields ]
-    for phonenumber in [filter_digits(i) for i in record[0]]:
+    for phonenumber in [filterDigits(i) for i in record[0]]:
       phonebook[phonenumber] = ' '.join([record[1], record[2]])
   return phonebook
 
 
 phonebook = getPhonebook()
 
-def lookup(number):
-  digitsonly = filter_digits(number)
+def lookupName(number):
+  digitsonly = filterDigits(number)
   try:
     return phonebook[digitsonly]
   except KeyError:
@@ -313,11 +338,11 @@ if __name__ == '__main__':
   sqlitefile, fname = getSqliteFile(backupdir)
   print '... found:', fname
   print 'Connecting with sqlite3 ...'
-  conn = sqlite3.connect(sqlitefile.name)
+  sqlitedb = sqlite3.connect(sqlitefile.name)
   print '... successful.'
   
-  print 'Getting messages from sqlite db...'
-  messages = getMessages(conn, mynumber)
+  print 'Getting messages from sqlite db ...'
+  messages = getMessages(sqlitedb, mynumber)
   print '... found %d messages' % len(messages)
   
   print 'Uploading messages to IMAP account %s@%s' % (user, host)
