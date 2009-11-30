@@ -35,7 +35,10 @@ def listDevices(toplevelDir=None):
     pattern = toplevelDir + '/Info.plist'
   for f in glob.glob(pattern):
     plist = NSDictionary.dictionaryWithContentsOfFile_(f)
-    res.append([plist.objectForKey_(i) for i in ('Device Name', 'Product Version', 'Product Type')])
+    dev = {'Backup Directory' : f[:-len('/Info.plist')]}
+    for i in ('Device Name', 'Product Version', 'Product Type'):
+      dev[i] = plist.objectForKey_(i)
+    res.append(dev)
   return res
 
 

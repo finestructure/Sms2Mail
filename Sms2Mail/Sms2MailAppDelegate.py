@@ -15,9 +15,15 @@ class Sms2MailAppDelegate(NSObject):
   tf = objc.IBOutlet()
 
   def applicationDidFinishLaunching_(self, sender):
-    NSLog("Application did finish launching.")
-
+    self.devices = sms2mail.listDevices()
+    self.tf.removeAllItems()
+    for dev in self.devices:
+      title = '%s (%s - %s)' % (dev['Device Name'], 
+                                dev['Product Version'],
+                                dev['Product Type'])
+      self.tf.addItemWithTitle_(title)
+      
   @objc.IBAction
   def buttonPressed_(self, sender):
-    sqlitefile, fname = sms2mail.getSqliteFile(sms2mail.backupdir)
-    self.tf.setStringValue_(fname)
+    backupdir = self.devices[self.tf.indexOfSelectedItem()]['Backup Directory']
+    NSLog(backupdir)
