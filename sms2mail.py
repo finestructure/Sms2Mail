@@ -21,6 +21,10 @@ from email.message import Message
 config_filename = os.path.expanduser('~/.sms2mail.conf')
 cache_filename = os.path.expanduser('~/.sms2mail.cache')
 
+# could be a config option but it's probably not necessary
+backupdir = os.path.expanduser('~/Library/Application Support/'
+                               'MobileSync/Backup')
+
 
 def findLatestBackupDir(backupdir):
   dirs = {}
@@ -314,10 +318,6 @@ def lookupName(number):
 
 
 if __name__ == '__main__':
-
-  # could be a config option but it's probably not necessary
-  backupdir = os.path.expanduser('~/Library/Application Support/'
-                                 'MobileSync/Backup')
 
   # get options
   print 'Reading config' 
