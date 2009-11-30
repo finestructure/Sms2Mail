@@ -1,0 +1,7 @@
+//
+// Prefix header for all source files of the 'Sms2Mail' target in the 'Sms2Mail' project
+//
+
+#ifdef __OBJC__
+    #import <Cocoa/Cocoa.h>
+#endif
