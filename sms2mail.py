@@ -22,22 +22,34 @@ config_filename = os.path.expanduser('~/.sms2mail.conf')
 cache_filename = os.path.expanduser('~/.sms2mail.cache')
 
 # could be a config option but it's probably not necessary
-backupdir = os.path.expanduser('~/Library/Application Support/'
+BACKUPDIR = os.path.expanduser('~/Library/Application Support/'
                                'MobileSync/Backup')
 
 
-def findLatestBackupDir(backupdir):
+def listDevices(toplevelDir=None):
+  res = []
+  if toplevelDir is None:
+    pattern = BACKUPDIR + '/*/Info.plist'
+  else:
+    pattern = toplevelDir + '/Info.plist'
+  for f in glob.glob(pattern):
+    plist = NSDictionary.dictionaryWithContentsOfFile_(f)
+    res.append([plist.objectForKey_(i) for i in ('Device Name', 'Product Version', 'Product Type')])
+  return res
+
+
+def findLatestBackupDir():
   dirs = {}
-  for p in os.listdir(backupdir):
-    path = os.path.join(backupdir, p)
+  for p in os.listdir(BACKUPDIR):
+    path = os.path.join(BACKUPDIR, p)
     if os.path.isdir(path):
       dirs[os.path.getmtime(path)] = path
   keys = sorted(dirs.keys())
   return dirs[keys[-1]]
 
 
-def findSqliteFile(backupdir):
-  for root, dirs, files in os.walk(backupdir):
+def findSqliteFile(backupSubdir):
+  for root, dirs, files in os.walk(backupSubdir):
     for f in files:
       if f.endswith('mdinfo'):
         try:
@@ -54,13 +66,12 @@ def findSqliteFile(backupdir):
   return None
 
 
-def getSqliteFile(backupdir):
+def getSqliteFile():
   """
   Save the sms sqlite database from the backup in a temp file.
   Returns the temp file object.
   """
-  latest_backupdir = findLatestBackupDir(backupdir)
-  sqlitefilename = findSqliteFile(latest_backupdir)
+  sqlitefilename = findSqliteFile(findLatestBackupDir())
   temp = tempfile.NamedTemporaryFile()
   temp.write(open(sqlitefilename).read())
   temp.flush()
@@ -335,7 +346,7 @@ if __name__ == '__main__':
   mynumber = config.get('Phone', 'mynumber')
 
   print 'Looking for sms sqlite file ...'
-  sqlitefile, fname = getSqliteFile(backupdir)
+  sqlitefile, fname = getSqliteFile()
   print '... found:', fname
   print 'Connecting with sqlite3 ...'
   sqlitedb = sqlite3.connect(sqlitefile.name)
