@@ -16,6 +16,7 @@ import time
 import pickle
 import AddressBook
 import email
+import glob
 from email.message import Message
 
 config_filename = os.path.expanduser('~/.sms2mail.conf')
