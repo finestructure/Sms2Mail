@@ -36,10 +36,13 @@ def listDevices(toplevelDir=None):
   for f in glob.glob(pattern):
     plist = NSDictionary.dictionaryWithContentsOfFile_(f)
     dev = {'Backup Directory' : f[:-len('/Info.plist')]}
-    for i in ('Device Name', 'Product Version', 'Product Type'):
-      dev[i] = plist.objectForKey_(i)
+    for key in ('Device Name', 'Product Version', 'Product Type', 
+              'Last Backup Date'):
+      dev[key] = plist.objectForKey_(key)
     res.append(dev)
-  return res
+  # sort the result from latest to earliest backup
+  return sorted(res, 
+                lambda x,y: -cmp(x['Last Backup Date'], y['Last Backup Date']))
 
 
 def findLatestBackupDir():
