@@ -12,7 +12,9 @@ import sms2mail
 
 class Sms2MailAppDelegate(NSObject):
 
-  tf = objc.IBOutlet()
+  devicePopup = objc.IBOutlet()
+  productVersionLabel = objc.IBOutlet()
+  lastBackupDateLabel = objc.IBOutlet()
   productTypes = {'iPhone1,1':'Original iPhone',
                   'iPhone1,2':'iPhone 3G',
                   'iPhone2,1':'iPhone 3GS',
@@ -23,18 +25,22 @@ class Sms2MailAppDelegate(NSObject):
 
   def applicationDidFinishLaunching_(self, sender):
     self.devices = sms2mail.listDevices()
-    self.tf.removeAllItems()
+    self.devicePopup.removeAllItems()
     for dev in self.devices:
+      print 'dev:', dev
       try:
         productType = self.productTypes[dev['Product Type']]
       except KeyError:
         productType = dev['Product Type']
-      title = '%s (%s - %s)' % (dev['Device Name'], 
-                                dev['Product Version'],
-                                productType)
-      self.tf.addItemWithTitle_(title)
+      title = '%s (%s)' % (dev['Device Name'], productType)
+      self.devicePopup.addItemWithTitle_(title)
+    self.productVersionLabel.setObjectValue_(self.devices[0]['Product Version'])
+    self.lastBackupDateLabel.setObjectValue_(self.devices[0]['Last Backup Date'])
       
   @objc.IBAction
-  def buttonPressed_(self, sender):
-    backupdir = self.devices[self.tf.indexOfSelectedItem()]['Backup Directory']
-    NSLog(backupdir)
+  def popupSelected_(self, sender):
+    NSLog('popup selected: ' + str(sender.indexOfSelectedItem()))
+    dev = self.devices[self.devicePopup.indexOfSelectedItem()]
+    self.productVersionLabel.setValue_(dev['Product Version'])
+    self.lastBackupDateLabel.setValue_(dev['Last Backup Date'])
+    
