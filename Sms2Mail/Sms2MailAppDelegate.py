@@ -51,6 +51,12 @@ class Sms2MailAppDelegate(NSObject):
   def popupSelected_(self, sender):
     dev = self.devices[self.devicePopup.indexOfSelectedItem()]
     self.selectDevice(dev)
+
+
+  @objc.IBAction
+  def upload_(self, sender):
+    dev = self.devices[self.devicePopup.indexOfSelectedItem()]
+    print 'upload'
   
   
   def selectDevice(self, device):
