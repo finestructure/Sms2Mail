@@ -103,28 +103,44 @@ def getGroups(sqlitedb):
   return groups
 
 
-def createMessage(sender, receiver, subject, timestamp, sms_id, body):
-  try:
-    msg = Message()
-    msg.add_header('From', sender.encode('utf-8'))
-    msg.add_header('Subject', subject.encode('utf-8'))
-    msg.add_header('Date', str(datetime.datetime.fromtimestamp(timestamp)))
-    msg.add_header('To', receiver.encode('utf-8'))
-    msg.add_header('Sms-Id', sms_id)
-    msg.set_payload(body.encode('utf-8'))
-    msg.timestamp = time.localtime(timestamp)
-    msg.sms_id = sms_id
-    email.encoders.encode_quopri(msg)
-    msg.set_charset('utf-8')
-    return msg
-  except:
-    print sender, type(sender)
-    print receiver
-    print subject
-    print timestamp
-    print sms_id
-    print body
-    raise
+class Sms(object):
+
+  def __init__(self, sender, receiver, subject, timestamp, sms_id, body):
+    self.sender = sender.encode('utf-8')
+    self.receiver = receiver.encode('utf-8')
+    self.subject = subject.encode('utf-8')
+    self.timestamp = timestamp
+    self.sms_id = sms_id
+    self.body = body.encode('utf-8')
+    self.date = datetime.datetime.fromtimestamp(self.timestamp)
+
+  def toEmail(self):
+    try:
+      msg = Message()
+      msg.add_header('From', self.sender)
+      msg.add_header('Subject', self.subject)
+      msg.add_header('Date', str(self.date))
+      msg.add_header('To', self.receiver)
+      msg.add_header('Sms-Id', self.sms_id)
+      msg.set_payload(self.body)
+      msg.timestamp = time.localtime(self.timestamp)
+      msg.sms_id = self.sms_id
+      email.encoders.encode_quopri(msg)
+      msg.set_charset('utf-8')
+      return msg
+    except:
+      print sender, type(sender)
+      print receiver
+      print subject
+      print timestamp
+      print sms_id
+      print body
+      raise
+  
+  def __str__(self):
+    return 'SMS from <%s> to <%s>, date <%s>, body <%s>' % (
+      self.sender, self.receiver,
+      str(self.date), self.body)
 
 
 def getMessages(sqlitedb, mynumber):
@@ -164,7 +180,7 @@ def getMessages(sqlitedb, mynumber):
     sms_id = hashlib.sha1('%s%d%d%d' % (
                           phone_number, timestamp, flags, group_id)).hexdigest()    
     
-    msg = createMessage(sender, receiver, subject, timestamp, sms_id, body)
+    msg = Sms(sender, receiver, subject, timestamp, sms_id, body)
 
     messages.append(msg)
   
@@ -364,7 +380,7 @@ if __name__ == '__main__':
   print '... successful.'
   
   print 'Getting messages from sqlite db ...'
-  messages = getMessages(sqlitedb, mynumber)
+  messages = [sms.toEmail() for sms in getMessages(sqlitedb, mynumber)]
   print '... found %d messages' % len(messages)
   
   print 'Uploading messages to IMAP account %s@%s' % (user, host)
