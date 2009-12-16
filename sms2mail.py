@@ -224,7 +224,7 @@ def fetchExistingIds(imap_connection):
   return existing_ids
 
 
-def uploadMessages(messages):
+def uploadMessages(messages, host, port, user, password, sms_mailbox):
   """
   Uploads new messages to the IMAP server. New messages are identified by
   their sms_id. Only messages with ids not already present on the server
@@ -384,6 +384,6 @@ if __name__ == '__main__':
   print '... found %d messages' % len(messages)
   
   print 'Uploading messages to IMAP account %s@%s' % (user, host)
-  uploadMessages(messages)
+  uploadMessages(messages, host, port, user, password, sms_mailbox)
     
       

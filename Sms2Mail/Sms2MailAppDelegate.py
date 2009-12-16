@@ -20,6 +20,7 @@ class Sms2MailAppDelegate(NSObject):
   serialNumberLabel = objc.IBOutlet()
   messageCountLabel = objc.IBOutlet()
   messageView = objc.IBOutlet()
+  spinner = objc.IBOutlet()
   
   productTypes = {'iPhone1,1':'Original iPhone',
                   'iPhone1,2':'iPhone 3G',
@@ -30,9 +31,23 @@ class Sms2MailAppDelegate(NSObject):
                   }
 
   messages = []
+  preferencesController = None
 
 
   def applicationDidFinishLaunching_(self, sender):
+    # set up user defaults
+    initialValues = {}
+    initialValues['hostname'] = ''
+    initialValues['port'] = '993'
+    initialValues['user'] = ''
+    initialValues['password'] = ''
+    initialValues['smsMailbox'] = 'sms'
+    NSUserDefaults.standardUserDefaults()\
+      .registerDefaults_(initialValues)
+    NSUserDefaultsController.sharedUserDefaultsController()\
+      .setInitialValues_(initialValues);
+
+    # init gui
     self.devices = sms2mail.listDevices()
     self.devicePopup.removeAllItems()
     for dev in self.devices:
@@ -56,16 +71,46 @@ class Sms2MailAppDelegate(NSObject):
   @objc.IBAction
   def upload_(self, sender):
     dev = self.devices[self.devicePopup.indexOfSelectedItem()]
-    print 'upload'
+    print 'uploading'
+    self.spinner.setHidden_(False)
+    self.spinner.startAnimation_(self)
+    messages = [sms.toEmail() for sms in self.messages]
+    defaults = NSUserDefaultsController.sharedUserDefaultsController().values()
+    host = defaults.valueForKey_('hostname')
+    port = int(defaults.valueForKey_('port'))
+    user = defaults.valueForKey_('user')
+    password = defaults.valueForKey_('password')
+    sms_mailbox = defaults.valueForKey_('smsMailbox')
+    sms2mail.uploadMessages(messages, host, port, user, password, sms_mailbox)
+    self.spinner.stopAnimation_(self)
+    self.spinner.setHidden_(True)    
+
+
+  @objc.IBAction
+  def showPreferences_(self, sender):
+    print 'prefs'
+    if not self.preferencesController:
+      self.preferencesController = NSWindowController.alloc()\
+        .initWithWindowNibName_('Preferences')
+    self.preferencesController.showWindow_(self)
+
   
-  
+  def fetchMessages(self, device):
+    self.spinner.setHidden_(False)
+    self.spinner.startAnimation_(self)
+    sqlitefile, _ = sms2mail.getSqliteFile(device['Backup Directory'])
+    sqlitedb = sqlite3.connect(sqlitefile.name)
+    self.messages = sms2mail.getMessages(sqlitedb, device['Phone Number'])
+    self.spinner.stopAnimation_(self)
+    self.spinner.setHidden_(True)
+    
+    
   def selectDevice(self, device):
     self.productVersionLabel.setObjectValue_(device['Product Version'])
     self.lastBackupDateLabel.setObjectValue_(device['Last Backup Date'])
     self.serialNumberLabel.setObjectValue_(device['Serial Number'])
-    sqlitefile, _ = sms2mail.getSqliteFile(device['Backup Directory'])
-    sqlitedb = sqlite3.connect(sqlitefile.name)
-    self.messages = sms2mail.getMessages(sqlitedb, device['Phone Number'])
+    
+    self.fetchMessages(device)
     if len(self.messages) == 1:
       s = '1 Message'
     else:
@@ -73,8 +118,10 @@ class Sms2MailAppDelegate(NSObject):
     self.messageCountLabel.setStringValue_(s)
     self.sortMessageView()
 
+
   def numberOfRowsInTableView_(self, tableView):
     return len(self.messages)
+
   
   def tableView_objectValueForTableColumn_row_(self, tableView, tableColumn, row):
     msg = self.messages[row]
@@ -86,9 +133,11 @@ class Sms2MailAppDelegate(NSObject):
       return str(msg.date)
     elif tableColumn.identifier() == 'Message':
       return msg.body
+
   
   def tableView_sortDescriptorsDidChange_(self, tableView, oldDescriptors):
     self.sortMessageView()
+
   
   def sortMessageView(self):
     # only use first one for now
