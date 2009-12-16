@@ -273,6 +273,8 @@ def uploadMessages(messages):
 
 
 def filterDigits(string):
+  if string is None:
+    return string
   digits = '0123456789'
   return ''.join([c for c in string if c in digits])
 
@@ -332,6 +334,8 @@ def lookupName(number):
       for n in phonebook.keys():
         if n.endswith(digitsonly):
           return phonebook[n]
+    return number
+  finally:
     return number
 
 
