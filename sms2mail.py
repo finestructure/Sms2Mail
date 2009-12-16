@@ -73,12 +73,12 @@ def findSqliteFile(backupSubdir):
   return None
 
 
-def getSqliteFile():
+def getSqliteFile(path):
   """
   Save the sms sqlite database from the backup in a temp file.
   Returns the temp file object.
   """
-  sqlitefilename = findSqliteFile(findLatestBackupDir())
+  sqlitefilename = findSqliteFile(path)
   temp = tempfile.NamedTemporaryFile()
   temp.write(open(sqlitefilename).read())
   temp.flush()
@@ -353,7 +353,7 @@ if __name__ == '__main__':
   mynumber = config.get('Phone', 'mynumber')
 
   print 'Looking for sms sqlite file ...'
-  sqlitefile, fname = getSqliteFile()
+  sqlitefile, fname = getSqliteFile(findLatestBackupDir())
   print '... found:', fname
   print 'Connecting with sqlite3 ...'
   sqlitedb = sqlite3.connect(sqlitefile.name)
