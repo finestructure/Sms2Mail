@@ -351,7 +351,7 @@ def lookupName(number):
         if n.endswith(digitsonly):
           return phonebook[n]
     return number
-  finally:
+  except:
     return number
 
 
