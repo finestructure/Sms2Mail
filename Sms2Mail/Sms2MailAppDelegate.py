@@ -103,7 +103,6 @@ class Sms2MailAppDelegate(NSObject):
       self.messages.sort(lambda x, y: sign*cmp(x.date, y.date))
     else:
       return
-    print 'first message:', self.messages[0]
     self.messageView.reloadData()
   
 
