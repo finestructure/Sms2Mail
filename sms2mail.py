@@ -224,15 +224,23 @@ def fetchExistingIds(imap_connection):
   return existing_ids
 
 
-def uploadMessages(messages, host, port, user, password, sms_mailbox):
+def log(logger, msg):
+  if logger:
+    logger.write(msg)
+  else:
+    print msg
+
+
+def uploadMessages(messages, host, port, user, password, sms_mailbox, logger=None):
   """
   Uploads new messages to the IMAP server. New messages are identified by
   their sms_id. Only messages with ids not already present on the server
   are uploaded.
   """
-  print 'Reading id cache from disk'
+  log(logger, 'Reading id cache from disk')
   cached_ids = readExistingIdsCache()
-  print 'Found %d entries' % len(cached_ids)
+  
+  log(logger, 'Found %d entries' % len(cached_ids))
   
   # check if there are any new messags at all against the cache
   # before hitting the IMAP server
@@ -241,13 +249,13 @@ def uploadMessages(messages, host, port, user, password, sms_mailbox):
     if msg.sms_id not in cached_ids:
       new_messages.append(msg)
 
-  print 'New message count:', len(new_messages)
+  log(logger, 'New message count: %d' % len(new_messages))
 
   if len(new_messages) == 0:
     return
   
   # there are messages left which are not in our cache, refresh it now
-  print 'Connecting to IMAP server %s:%s...' % (host, str(port))
+  log(logger, 'Connecting to IMAP server %s:%s...' % (host, str(port)))
   M = imaplib.IMAP4_SSL(host=host, port=port)
   M.login(user, password)    
   M.select(sms_mailbox)
@@ -257,32 +265,32 @@ def uploadMessages(messages, host, port, user, password, sms_mailbox):
   # user has deleted sms mails they won't be resynched -- this will only
   # happen when the cache is manually reset or the script is run from 
   # another machine
-  print 'Fetching existing ids from the server...'
+  log(logger, 'Fetching existing ids from the server...')
   server_ids = fetchExistingIds(M)
-  print 'Found %d ids on the server.' % len(server_ids)
+  log(logger, 'Found %d ids on the server.' % len(server_ids))
   existing_ids = cached_ids.union(server_ids)
-  print 'Total existing ids: %d' % len(existing_ids)
+  log(logger, 'Total existing ids: %d' % len(existing_ids))
   cache = open(cache_filename, 'w')
   pickle.dump(existing_ids, cache)
   cache.close()
   
-  print 'Uploading new messages...'
+  log(logger, 'Uploading new messages...')
   new_count = 0
   skipped_count = 0
   for index, msg in enumerate(new_messages):
     if msg.sms_id not in existing_ids:
-      print 'Saving %d %s' % (index, msg.sms_id)
+      log(logger, 'Saving %d %s' % (index, msg.sms_id))
       flags = None
       date = time.localtime(msg['time'])
       res, _ = M.append(sms_mailbox, flags, msg.timestamp, msg.as_string())
-      print '  ', res
+      log(logger, res)
       if res == 'OK':
         new_count += 1
     else:
       #print 'Skipping %d %s' % (index, msg['id'])
       skipped_count += 1
-  print 'New messages uploaded:', new_count
-  print 'Skipped (previously uploaded):', skipped_count
+  log(logger, 'New messages uploaded: %d' % new_count)
+  log(logger, 'Skipped (previously uploaded): %d' % skipped_count)
 
   M.close()
   M.logout()
