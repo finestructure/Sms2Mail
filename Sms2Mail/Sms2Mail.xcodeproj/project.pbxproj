@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		5A2C83E410D91A5C000250C5 /* Preferences.xib in Resources */ = {isa = PBXBuildFile; fileRef = 5A2C83E210D91A5C000250C5 /* Preferences.xib */; };
+		5A7F993110DA69D700236F13 /* sms2mail.icns in Resources */ = {isa = PBXBuildFile; fileRef = 5A7F993010DA69D700236F13 /* sms2mail.icns */; };
 		5AD770E510C3CD0700D9126B /* sms2mail.py in Resources */ = {isa = PBXBuildFile; fileRef = 5AD770E410C3CD0700D9126B /* sms2mail.py */; };
 		77631A270C06C501005415CB /* Python.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 77631A260C06C501005415CB /* Python.framework */; };
 		77631A3F0C0748CF005415CB /* main.py in Resources */ = {isa = PBXBuildFile; fileRef = 77631A3E0C0748CF005415CB /* main.py */; };
@@ -27,6 +28,7 @@
 		29B97325FDCFA39411CA2CEA /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
 		32CA4F630368D1EE00C91783 /* Sms2Mail_Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Sms2Mail_Prefix.pch; sourceTree = "<group>"; };
 		5A2C83E310D91A5C000250C5 /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/Preferences.xib; sourceTree = "<group>"; };
+		5A7F993010DA69D700236F13 /* sms2mail.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = sms2mail.icns; sourceTree = "<group>"; };
 		5AD770E410C3CD0700D9126B /* sms2mail.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; name = sms2mail.py; path = ../sms2mail.py; sourceTree = SOURCE_ROOT; };
 		77631A260C06C501005415CB /* Python.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Python.framework; path = /System/Library/Frameworks/Python.framework; sourceTree = "<absolute>"; };
 		77631A3E0C0748CF005415CB /* main.py */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.script.python; path = main.py; sourceTree = "<group>"; };
@@ -110,6 +112,7 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				5A7F993010DA69D700236F13 /* sms2mail.icns */,
 				77C8C1F70C07829500965286 /* MainMenu.xib */,
 				5A2C83E210D91A5C000250C5 /* Preferences.xib */,
 				8D1107310486CEB800E47090 /* Info.plist */,
@@ -176,6 +179,7 @@
 				77C8C1F90C07829500965286 /* MainMenu.xib in Resources */,
 				5AD770E510C3CD0700D9126B /* sms2mail.py in Resources */,
 				5A2C83E410D91A5C000250C5 /* Preferences.xib in Resources */,
+				5A7F993110DA69D700236F13 /* sms2mail.icns in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
