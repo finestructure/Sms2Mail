@@ -32,6 +32,7 @@ class Sms2MailAppDelegate(NSObject):
   messageCountLabel = objc.IBOutlet()
   messageView = objc.IBOutlet()
   spinner = objc.IBOutlet()
+  updateButton = objc.IBOutlet()
   
   productTypes = {'iPhone1,1':'Original iPhone',
                   'iPhone1,2':'iPhone 3G',
@@ -90,6 +91,7 @@ class Sms2MailAppDelegate(NSObject):
     dev = self.devices[self.devicePopup.indexOfSelectedItem()]
     self.spinner.setHidden_(False)
     self.spinner.startAnimation_(self)
+    self.updateButton.setEnabled_(False)
     messages = [sms.toEmail() for sms in self.messages]
     defaults = NSUserDefaultsController.sharedUserDefaultsController().values()
     host = defaults.valueForKey_('hostname')
@@ -98,6 +100,7 @@ class Sms2MailAppDelegate(NSObject):
     password = defaults.valueForKey_('password')
     sms_mailbox = defaults.valueForKey_('smsMailbox')
     sms2mail.uploadMessages(messages, host, port, user, password, sms_mailbox, logger)
+    self.updateButton.setEnabled_(True)
     self.spinner.stopAnimation_(self)
     self.spinner.setHidden_(True)
 
