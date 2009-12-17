@@ -9,8 +9,19 @@
 
 from Foundation import *
 from AppKit import *
+from LogWindowController import LogWindowController
 import sms2mail
 import sqlite3
+
+
+class Logger:
+  def __init__(self, textField):
+    self.textField = textField
+    self.textField.setString_('')
+
+  def write(self, msg):
+    self.textField.setString_(self.textField.string() + msg + '\n')
+
 
 class Sms2MailAppDelegate(NSObject):
 
@@ -32,6 +43,7 @@ class Sms2MailAppDelegate(NSObject):
 
   messages = []
   preferencesController = None
+  logWindowController = None
 
 
   def applicationDidFinishLaunching_(self, sender):
@@ -68,10 +80,14 @@ class Sms2MailAppDelegate(NSObject):
     self.selectDevice(dev)
 
 
-  @objc.IBAction
-  def upload_(self, sender):
+  def upload(self):
+    pool = NSAutoreleasePool.alloc().init()
+    if not self.logWindowController:
+      self.logWindowController = LogWindowController.alloc()\
+        .initWithWindowNibName_('LogWindow')
+    self.logWindowController.showWindow_(self)
+    logger = Logger(self.logWindowController.textField)
     dev = self.devices[self.devicePopup.indexOfSelectedItem()]
-    print 'uploading'
     self.spinner.setHidden_(False)
     self.spinner.startAnimation_(self)
     messages = [sms.toEmail() for sms in self.messages]
@@ -81,14 +97,20 @@ class Sms2MailAppDelegate(NSObject):
     user = defaults.valueForKey_('user')
     password = defaults.valueForKey_('password')
     sms_mailbox = defaults.valueForKey_('smsMailbox')
-    sms2mail.uploadMessages(messages, host, port, user, password, sms_mailbox)
+    sms2mail.uploadMessages(messages, host, port, user, password, sms_mailbox, logger)
     self.spinner.stopAnimation_(self)
-    self.spinner.setHidden_(True)    
+    self.spinner.setHidden_(True)
+
+
+  @objc.IBAction
+  def upload_(self, sender):
+    t = NSThread.alloc()\
+      .initWithTarget_selector_object_(self, self.upload, None)
+    t.start()
 
 
   @objc.IBAction
   def showPreferences_(self, sender):
-    print 'prefs'
     if not self.preferencesController:
       self.preferencesController = NSWindowController.alloc()\
         .initWithWindowNibName_('Preferences')
